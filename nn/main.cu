@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "matrix.h"
 #include "binary_cross_entropy_loss.h"
+#include "linear_layer.h"
 using namespace std;
 
 void test_matrix() {
@@ -51,8 +52,24 @@ void test_binary_cross_entropy_loss() {
     cout << "loss grad: \n" << loss_grad << endl;
 }
 
+void test_linear_layer_forward(){
+    LinearLayer layer("test_linear_layer", 2, 1);
+    cout << "layer: \n" << layer.weights << endl << layer.biases << endl;
+
+    Matrix input(1, 2);
+    input.set_row(0, {1, 2});
+    input.copy_to_gpu();
+    cout << "input: \n" << input << endl;
+
+    Matrix output = layer.forward(input);
+    output.copy_to_cpu();
+    cout << "output: \n" << output << endl;
+}
+
 int main(void)
 {
-    test_binary_cross_entropy_loss();
+    // test_matrix();
+    // test_binary_cross_entropy_loss();
+    test_linear_layer_forward();
     return 0;
 }

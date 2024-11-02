@@ -4,13 +4,13 @@ NVCC = nvcc
 CCBIN = gcc-9
 # Compiler and linker flags
 NVCCFLAGS = -ccbin $(CCBIN) -std=c++14 -g -G
-LDFLAGS = -lstdc++
+LDFLAGS = -lstdc++ -lm
 
 # Target executable
 TARGET = nn
 
 # Source files
-SOURCES = main.cu shape.cu matrix.cu binary_cross_entropy_loss.cu
+SOURCES = main.cu shape.cu matrix.cu binary_cross_entropy_loss.cu linear_layer.cu
 
 # Object files
 OBJECTS = $(SOURCES:.cu=.o)

@@ -11,10 +11,11 @@ public:
         return msg_.c_str();
     }
     static void throw_if_error(const std::string& message) {
-        cudaError_t error  = cudaGetLastError();
-        if (error != cudaSuccess){
-            std::cerr <<  message  << ":" << error;
-            throw CudaException(message);
+        cudaError_t error = cudaGetLastError();
+        if (error != cudaSuccess) {
+            std::string error_string = cudaGetErrorString(error);
+            std::cerr << "CUDA Error - " << message << ": " << error_string << std::endl;
+            throw CudaException(message + ": " + error_string);
         }
     }
 private:
