@@ -80,6 +80,14 @@ const float& Matrix::operator[](size_t index) const {
     return cpu_data_ptr.get()[index];
 }
 
+void Matrix::setIdentity(){
+    for (size_t i = 0; i < shape_.x; ++i){
+        for (size_t j = 0; j < shape_.y; ++j){
+            (*this)(i, j) = (i == j) ? 1 : 0;
+        }
+    }
+}
+
 void Matrix::set_row(size_t row, const std::vector<float>& values) {
     if (values.size() != shape_.y) {
         throw std::runtime_error("Invalid number of values to set, expected " + std::to_string(shape_.y) + " got " + std::to_string(values.size()));

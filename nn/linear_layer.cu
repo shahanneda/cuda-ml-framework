@@ -69,6 +69,6 @@ Matrix LinearLayer::forward(const Matrix& input) {
 }
 
 Matrix LinearLayer::backward(const Matrix& input, const Matrix& grad_output) {
-    // return grad_output * weights.T();
+    // return ;
     return Matrix(0, 0);
 }

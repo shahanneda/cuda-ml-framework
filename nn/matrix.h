@@ -31,6 +31,7 @@ class Matrix {
 
         Matrix T();
         Matrix operator*(const Matrix& other) const;
+        void setIdentity();
 
     private:
         Shape shape_;
