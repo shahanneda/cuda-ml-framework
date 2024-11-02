@@ -94,7 +94,6 @@ int main(){
 
         cout << "Time taken by program is : " << fixed << setprecision(5) << time_taken << " sec " << endl;
 
-
         delete[] points;
         delete[] results;
         return 0;
