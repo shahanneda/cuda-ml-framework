@@ -66,10 +66,39 @@ void test_linear_layer_forward(){
     cout << "output: \n" << output << endl;
 }
 
+void test_transpose(){
+    Matrix matrix = Matrix(3, 2);
+    matrix.set_row(0, {1, 2});
+    matrix.set_row(1, {3, 4});
+    matrix.set_row(2, {5, 6});
+    cout << "matrix: \n" << matrix << endl;
+    Matrix transposed = matrix.T();
+    cout << "transposed: \n" << transposed << endl;
+}
+
+void test_matrix_multiplication(){
+    Matrix a = Matrix(2, 3);
+    Matrix b = Matrix(3, 2);
+    a.set_row(0, {1, 2, 3});
+    a.set_row(1, {4, 5, 6});
+    b.set_row(0, {7, 8});
+    b.set_row(1, {9, 10});
+    b.set_row(2, {11, 12});
+    a.copy_to_gpu();
+    b.copy_to_gpu();
+    cout << "a: \n" << a << endl;
+    cout << "b: \n" << b << endl;
+    Matrix c = a * b;
+    c.copy_to_cpu();
+    cout << "c: \n" << c << endl;
+}
+
 int main(void)
 {
     // test_matrix();
     // test_binary_cross_entropy_loss();
-    test_linear_layer_forward();
+    // test_linear_layer_forward();
+    // test_transpose();
+    test_matrix_multiplication();
     return 0;
 }

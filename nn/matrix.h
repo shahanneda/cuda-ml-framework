@@ -29,7 +29,7 @@ class Matrix {
         uint32_t rows() const { return shape_.x; }
         uint32_t cols() const { return shape_.y; }
 
-        Matrix T() const;
+        Matrix T();
         Matrix operator*(const Matrix& other) const;
 
     private:

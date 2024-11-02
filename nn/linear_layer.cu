@@ -1,7 +1,7 @@
 #include "linear_layer.h"
 #include "cuda_exception.h"
 
-LinearLayer::LinearLayer(std::string name, uint32_t input_size, uint32_t output_size) : Layer(name), weights(input_size, output_size), biases(1, output_size) {
+LinearLayer::LinearLayer(std::string name, uint32_t input_size, uint32_t output_size) : Layer(name), weights(input_size, output_size), biases(1, output_size), weights_grad(input_size, output_size), biases_grad(1, output_size) {
 
     // input_size is the number of "columns" in the input matrix
     // output_size is the number of "columns" in the output matrix, which corresponds to the number of neurons in the layer

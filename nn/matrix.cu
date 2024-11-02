@@ -110,12 +110,41 @@ __global__ void transpose_kernel(float* M, float* out, uint32_t input_rows, uint
     out[col*input_rows + row] = M[row*input_cols + col];
 }
 
-Matrix Matrix::T() const {
+Matrix Matrix::T()  {
     Matrix out = Matrix(shape_.y, shape_.x);
-    transpose_kernel(gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols());
+    copy_to_gpu();
+    dim3 threads_per_block(16, 16, 1);
+    dim3 number_of_blocks((rows() + threads_per_block.x - 1) / threads_per_block.x, (cols() + threads_per_block.y - 1) / threads_per_block.y);
+
+    transpose_kernel<<<number_of_blocks, threads_per_block>>>(gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols());
+    out.copy_to_cpu();
+    return out;
 }
 
+__global__ void multiply_kernel(float* A, float* B, float* out, int a_rows, int a_cols, int b_rows, int b_cols){
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y*blockDim.y + threadIdx.y;
+    int out_rows = a_rows;
+    int out_cols = b_cols;
+    if (a_cols != b_rows){
+        // throw error
+        printf("Invalid matrix dimensions for multiplication, A cols: %d, B rows: %d\n", a_cols, b_rows);
+        return;
+    }
 
+    if (row >= out_rows || col >= out_cols){
+        return;
+    }
+
+    float sum  = 0;
+    for (int i = 0; i < a_cols; i++){
+        // sum += a[row][i] * b[i][col]
+        sum += A[row*a_cols + i] * B[i*b_cols + col];
+    }
+
+    // out[row][col] = sum;
+    out[row*out_cols + col] = sum;
+}
 
 Matrix Matrix::operator*(const Matrix& other) const{
     // This is A
@@ -123,5 +152,11 @@ Matrix Matrix::operator*(const Matrix& other) const{
     if (cols() != other.rows()){
         throw std::invalid_argument("Invalid matrix dimensions for multiplication");
     }
+    Matrix out = Matrix(rows(), other.cols());
+    dim3 threads_per_block(16, 16, 1);
+    dim3 number_of_blocks((rows() + threads_per_block.x - 1) / threads_per_block.x, (other.cols() + threads_per_block.y - 1) / threads_per_block.y);
 
+    multiply_kernel<<<number_of_blocks, threads_per_block>>>(gpu_data_ptr.get(), other.gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols(), other.rows(), other.cols());
+    out.copy_to_cpu();
+    return out;
 }
