@@ -99,3 +99,29 @@ void Matrix::set_col(size_t col, const std::vector<float>& values) {
         cpu_data_ptr.get()[i * shape_.y + col] = values[i];
     }
 }
+
+__global__ void transpose_kernel(float* M, float* out, uint32_t input_rows, uint32_t input_cols){
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y*blockDim.y + threadIdx.y;
+
+    if (row >= input_rows || col >= input_cols){
+        return;
+    }
+    out[col*input_rows + row] = M[row*input_cols + col];
+}
+
+Matrix Matrix::T() const {
+    Matrix out = Matrix(shape_.y, shape_.x);
+    transpose_kernel(gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols());
+}
+
+
+
+Matrix Matrix::operator*(const Matrix& other) const{
+    // This is A
+    // B is the other one
+    if (cols() != other.rows()){
+        throw std::invalid_argument("Invalid matrix dimensions for multiplication");
+    }
+
+}
