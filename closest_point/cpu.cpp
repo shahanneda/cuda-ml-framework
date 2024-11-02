@@ -50,7 +50,7 @@ void find_closest_points(float3* points, int N, float *results){
 int main(){
         srand(1);
 
-        int N = 10000;
+        int N = 100000;
         float3* points = new float3[N];
 
         generate_points(points, N);
