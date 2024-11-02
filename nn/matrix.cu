@@ -2,6 +2,7 @@
 #include <memory>
 #include <iostream>
 #include <cuda.h>
+#include "CudaException.h"
 
 Matrix::Matrix(Shape shape) : shape_(shape), cpu_data_ptr(nullptr), gpu_data_ptr(nullptr) {
     allocate_memory();
@@ -48,7 +49,9 @@ std::ostream& operator<<(std::ostream& os, const Matrix& matrix) {
     os << "[";
     for (size_t i = 0; i < matrix.shape_.x; ++i) {
         for (size_t j = 0; j < matrix.shape_.y; ++j) {
-            os << matrix(i, j) << (static_cast<size_t>(i) == matrix.shape_.x - 1 && static_cast<size_t>(j) == matrix.shape_.y - 1 ? "]" : " ");
+            char last = (static_cast<size_t>(i) == matrix.shape_.x - 1 && static_cast<size_t>(j) == matrix.shape_.y - 1) ? ']' : ' ';
+            char first = (static_cast<size_t>(i) == 0 && static_cast<size_t>(j) == 0) ? '\0' : ' ';
+            os << first << matrix(i, j) << last;
         }
         os << std::endl;
     }
@@ -60,9 +63,19 @@ int Matrix::total_size() const {
 }
 
 void Matrix::copy_to_gpu() {
-    cudaMemcpy(gpu_data_ptr.get(), cpu_data_ptr.get(), total_size(),  cudaMemcpyHostToDevice);
+    cudaMemcpy(gpu_data_ptr.get(), cpu_data_ptr.get(), total_size() * sizeof(float),  cudaMemcpyHostToDevice);
+    CudaException::throw_if_error("Failed to copy to GPU");
 }
 
 void Matrix::copy_to_cpu() {
-    cudaMemcpy(cpu_data_ptr.get(), gpu_data_ptr.get(), total_size(),  cudaMemcpyDeviceToHost);
+    cudaMemcpy(cpu_data_ptr.get(), gpu_data_ptr.get(), total_size() * sizeof(float),  cudaMemcpyDeviceToHost);
+    CudaException::throw_if_error("Failed to copy to CPU");
+}
+
+float& Matrix::operator[](size_t index) {
+    return cpu_data_ptr.get()[index];
+}
+
+const float& Matrix::operator[](size_t index) const {
+    return cpu_data_ptr.get()[index];
 }

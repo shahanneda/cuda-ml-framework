@@ -17,6 +17,9 @@ class Matrix {
         float& operator()(size_t row, size_t col);
         const float& operator()(size_t row, size_t col) const;
 
+        float& operator[](size_t index);
+        const float& operator[](size_t index) const;
+
         void copy_to_gpu();
         void copy_to_cpu();
 
