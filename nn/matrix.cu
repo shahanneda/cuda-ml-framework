@@ -2,7 +2,7 @@
 #include <memory>
 #include <iostream>
 #include <cuda.h>
-#include "CudaException.h"
+#include "cuda_exception.h"
 
 Matrix::Matrix(Shape shape) : shape_(shape), cpu_data_ptr(nullptr), gpu_data_ptr(nullptr) {
     allocate_memory();

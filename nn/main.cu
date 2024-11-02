@@ -1,8 +1,8 @@
 #include "shape.h"
 #include <iostream>
 #include <stdio.h>
-#include "CudaException.h"
 #include "matrix.h"
+#include "binary_cross_entropy_loss.h"
 using namespace std;
 
 void test_matrix() {

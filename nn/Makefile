@@ -10,7 +10,8 @@ LDFLAGS = -lstdc++
 TARGET = nn
 
 # Source files
-SOURCES = main.cu shape.cu matrix.cu
+SOURCES = main.cu shape.cu matrix.cu binary_cross_entropy_loss.cu
+
 
 # Object files
 OBJECTS = $(SOURCES:.cu=.o)
