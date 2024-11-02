@@ -10,7 +10,7 @@ LDFLAGS = -lstdc++
 TARGET = nn
 
 # Source files
-SOURCES = main.cu shape.cu
+SOURCES = main.cu shape.cu matrix.cu
 
 # Object files
 OBJECTS = $(SOURCES:.cu=.o)
