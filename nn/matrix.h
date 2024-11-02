@@ -26,6 +26,8 @@ class Matrix {
 
         void copy_to_gpu();
         void copy_to_cpu();
+        uint32_t rows() const { return shape_.x; }
+        uint32_t cols() const { return shape_.y; }
 
     private:
         Shape shape_;
