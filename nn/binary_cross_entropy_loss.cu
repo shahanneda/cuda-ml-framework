@@ -14,7 +14,7 @@ __global__ void forward_kernel(const float* y_true, const float* y_pred, float *
     float true_value = y_true[idx];
 
 
-    float cost_for_this_idx = -(true_value * logf(pred_value) + (1.0f-true_value)*logf(1.0f-pred_value)) / size;
+    float cost_for_this_idx = -(true_value * logf(pred_value) + (1.0f-true_value)*logf(1.0f-pred_value))/size;
 
     atomicAdd(loss, cost_for_this_idx);
 }
@@ -29,7 +29,7 @@ __global__ void backward_kernel(const float* y_true, const float* y_pred, float 
     pred_value = fmaxf(fminf(pred_value, 1.0f - 1e-7), 1e-7);
 
     float true_value = y_true[idx];
-    grad[idx] = (-true_value / pred_value)  - (1-true_value)/(1-pred_value);
+    grad[idx] = ((-true_value / pred_value) + (1-true_value)/(1-pred_value));
 }
 
 float BinaryCrossEntropyLoss::forward(const Matrix& y_true, const Matrix& y_pred) {
@@ -43,6 +43,7 @@ float BinaryCrossEntropyLoss::forward(const Matrix& y_true, const Matrix& y_pred
 
     float *d_loss;
     cudaMalloc(&d_loss, sizeof(float));
+    cudaMemset(d_loss, 0, sizeof(float));
 
     dim3 block_size = 256;
     dim3 number_of_blocks = ((y_pred.shape().x + (block_size.x - 1)) / block_size.x);
@@ -50,7 +51,8 @@ float BinaryCrossEntropyLoss::forward(const Matrix& y_true, const Matrix& y_pred
     cudaDeviceSynchronize();
     CudaException::throw_if_error("Failed in binary cross entropy forward");
 
-    float loss = *d_loss;
+    float loss;
+    cudaMemcpy(&loss, d_loss, sizeof(float), cudaMemcpyDeviceToHost);
     cudaFree(d_loss);
 
     return loss;

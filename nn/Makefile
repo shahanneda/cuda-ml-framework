@@ -3,7 +3,7 @@ NVCC = nvcc
 # C++ compiler to use with CUDA
 CCBIN = gcc-9
 # Compiler and linker flags
-NVCCFLAGS = -ccbin $(CCBIN) -std=c++14
+NVCCFLAGS = -ccbin $(CCBIN) -std=c++14 -g -G
 LDFLAGS = -lstdc++
 
 # Target executable
@@ -11,7 +11,6 @@ TARGET = nn
 
 # Source files
 SOURCES = main.cu shape.cu matrix.cu binary_cross_entropy_loss.cu
-
 
 # Object files
 OBJECTS = $(SOURCES:.cu=.o)

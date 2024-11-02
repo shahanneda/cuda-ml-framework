@@ -1,6 +1,7 @@
 #pragma once
 #include "shape.h"
 #include <memory>
+#include <vector>
 
 class Matrix {
     public:
@@ -19,6 +20,9 @@ class Matrix {
 
         float& operator[](size_t index);
         const float& operator[](size_t index) const;
+
+        void set_row(size_t row, const std::vector<float>& values);
+        void set_col(size_t col, const std::vector<float>& values);
 
         void copy_to_gpu();
         void copy_to_cpu();
