@@ -69,6 +69,36 @@ Matrix LinearLayer::forward(const Matrix& input) {
 }
 
 Matrix LinearLayer::backward(const Matrix& input, const Matrix& grad_output) {
-    // return ;
-    return Matrix(0, 0);
+    // this is the deritivate of the loss, with respect to the weights
+    // we know dL/dW = dL/dZ * dZ /dW, where Z = XW + b
+    // dL/dZ is grad_output
+    // dZ/dW is the input
+
+    // grad_output is of shape (batch_size, outputs)
+    // input is of shape (batch_size, inputs)
+    // weights_grad is of shape (inputs, outputs)
+    // biases_grad is of shape (1, outputs)
+
+    if (input.rows() != grad_output.rows()){
+        throw std::invalid_argument("Input and grad_output must have the same number of rows");
+    }
+    if (input.cols() != weights.rows()){
+        throw std::invalid_argument("Input and weights must have the same number of columns");
+    }
+
+    input.copy_to_gpu();
+    grad_output.copy_to_gpu();
+    
+    // Compute gradients for parameters
+    weights_grad = input.T() * grad_output;
+    biases_grad = grad_output.sum_rows();
+    
+    // Compute gradient to propagate backward: dL/dx = dL/dy * W^T
+    weights.copy_to_gpu();  // Ensure weights are on GPU
+    return grad_output * weights.T();
+}
+
+void LinearLayer::update_parameters(float learning_rate){
+    weights = weights - (weights_grad * learning_rate);
+    biases = biases - (biases_grad * learning_rate);
 }

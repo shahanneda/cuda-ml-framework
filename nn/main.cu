@@ -52,20 +52,6 @@ void test_binary_cross_entropy_loss() {
     cout << "loss grad: \n" << loss_grad << endl;
 }
 
-void test_linear_layer_forward(){
-    LinearLayer layer("test_linear_layer", 2, 1);
-    cout << "layer: \n" << layer.weights << endl << layer.biases << endl;
-
-    Matrix input(1, 2);
-    input.set_row(0, {1, 2});
-    input.copy_to_gpu();
-    cout << "input: \n" << input << endl;
-
-    Matrix output = layer.forward(input);
-    output.copy_to_cpu();
-    cout << "output: \n" << output << endl;
-}
-
 void test_transpose(){
     Matrix matrix = Matrix(3, 2);
     matrix.set_row(0, {1, 2});
@@ -93,12 +79,94 @@ void test_matrix_multiplication(){
     cout << "c: \n" << c << endl;
 }
 
+
+void test_linear_layer(){
+    LinearLayer layer("test_linear_layer", 2, 1);
+    cout << "layer: \n" << layer.weights << endl << layer.biases << endl;
+
+    Matrix input(1, 2);
+    input.set_row(0, {1, 2});
+    input.copy_to_gpu();
+    cout << "input: \n" << input << endl;
+
+    Matrix output = layer.forward(input);
+    output.copy_to_cpu();
+    cout << "output: \n" << output << endl;
+
+    // we need grad_output to be of shape (batch_size, outputs)
+    Matrix grad_output(1, 1);
+    grad_output(0, 0) = 1;
+
+    Matrix grad = layer.backward(input, grad_output);
+    grad.copy_to_cpu();
+    cout << "weights_grad: \n" << layer.weights_grad << endl;
+    cout << "biases_grad: \n" << layer.biases_grad << endl;
+
+}
+
+void test_sum_rows(){
+    Matrix matrix = Matrix(3, 2);
+    matrix.set_row(0, {1, 2});
+    matrix.set_row(1, {3, 4});
+    matrix.set_row(2, {5, 6});
+    cout << "matrix: \n" << matrix << endl;
+    Matrix sum = matrix.sum_rows();
+    cout << "sum: \n" << sum << endl;
+}
+
+void test_sum_cols(){
+    Matrix matrix = Matrix(3, 2);
+    matrix.set_row(0, {1, 2});
+    matrix.set_row(1, {3, 4});
+    matrix.set_row(2, {5, 6});
+    cout << "matrix: \n" << matrix << endl;
+    Matrix sum = matrix.sum_cols();
+    cout << "sum: \n" << sum << endl;
+}
+
+void test_learning_something_simple(){
+    // the goal is to have the linear layer always output 0.8
+    // we will use MSE as loss
+    // the target is a vector of 0.8s
+    // the input is a vector of 1s
+    // we will train the linear layer on this simple problem
+
+    LinearLayer layer("test_linear_layer", 5, 1);
+    cout << "layer: \n" << layer.weights << endl << layer.biases << endl;
+
+    Matrix input(1, 5);
+    input.set_row(0, {0.5, 0.8, 0.3, 0.4, 0.1});
+    input.copy_to_gpu();
+
+    Matrix target(1, 1);
+    target(0, 0) = 0.59;
+    target.copy_to_gpu();
+
+    for (size_t i = 0; i < 100; ++i){
+        Matrix output = layer.forward(input);
+        output.copy_to_cpu();
+        cout << "output: \n" << output(0,0) << endl;
+
+        Matrix loss = (output - target) *(output - target).sum_rows();
+        cout << "loss: \n" << loss(0, 0) << endl;
+
+        layer.backward(input, loss);
+        layer.update_parameters(0.2);
+        // cout << "layer: \n" << layer.weights << endl << layer.biases << endl;
+    }
+
+
+}
+
 int main(void)
 {
+    // test_sum_rows();
+    // test_sum_cols();
     // test_matrix();
     // test_binary_cross_entropy_loss();
-    // test_linear_layer_forward();
+    // test_linear_layer();
+    test_learning_something_simple();
     // test_transpose();
-    test_matrix_multiplication();
+    // test_matrix_multiplication();
     return 0;
 }

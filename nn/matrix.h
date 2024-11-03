@@ -24,14 +24,22 @@ class Matrix {
         void set_row(size_t row, const std::vector<float>& values);
         void set_col(size_t col, const std::vector<float>& values);
 
-        void copy_to_gpu();
-        void copy_to_cpu();
+        void copy_to_gpu() const;
+        void copy_to_cpu() const;
         uint32_t rows() const { return shape_.x; }
         uint32_t cols() const { return shape_.y; }
 
-        Matrix T();
+        Matrix T() const;
         Matrix operator*(const Matrix& other) const;
+        Matrix operator*(float scalar) const;
+        Matrix operator+(const Matrix& other) const;
+        Matrix operator-(const Matrix& other) const;
+
+        Matrix sum_rows() const;
+        Matrix sum_cols() const;
+
         void setIdentity();
+
 
     private:
         Shape shape_;

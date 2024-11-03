@@ -62,12 +62,12 @@ int Matrix::total_size() const {
     return shape_.x * shape_.y;
 }
 
-void Matrix::copy_to_gpu() {
+void Matrix::copy_to_gpu() const{
     cudaMemcpy(gpu_data_ptr.get(), cpu_data_ptr.get(), total_size() * sizeof(float),  cudaMemcpyHostToDevice);
     CudaException::throw_if_error("Failed to copy to GPU");
 }
 
-void Matrix::copy_to_cpu() {
+void Matrix::copy_to_cpu() const {
     cudaMemcpy(cpu_data_ptr.get(), gpu_data_ptr.get(), total_size() * sizeof(float),  cudaMemcpyDeviceToHost);
     CudaException::throw_if_error("Failed to copy to CPU");
 }
@@ -118,7 +118,7 @@ __global__ void transpose_kernel(float* M, float* out, uint32_t input_rows, uint
     out[col*input_rows + row] = M[row*input_cols + col];
 }
 
-Matrix Matrix::T()  {
+Matrix Matrix::T() const{
     Matrix out = Matrix(shape_.y, shape_.x);
     copy_to_gpu();
     dim3 threads_per_block(16, 16, 1);
@@ -160,11 +160,107 @@ Matrix Matrix::operator*(const Matrix& other) const{
     if (cols() != other.rows()){
         throw std::invalid_argument("Invalid matrix dimensions for multiplication");
     }
+    this->copy_to_gpu();
+    other.copy_to_gpu();
     Matrix out = Matrix(rows(), other.cols());
     dim3 threads_per_block(16, 16, 1);
     dim3 number_of_blocks((rows() + threads_per_block.x - 1) / threads_per_block.x, (other.cols() + threads_per_block.y - 1) / threads_per_block.y);
 
     multiply_kernel<<<number_of_blocks, threads_per_block>>>(gpu_data_ptr.get(), other.gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols(), other.rows(), other.cols());
+    out.copy_to_cpu();
+    return out;
+}
+
+__global__ void multiply_scalar_kernel(float* M, float* out, int rows, int cols, float scalar){
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y*blockDim.y + threadIdx.y;
+    if (row >= rows || col >= cols){
+        return;
+    }
+    out[row*cols + col] = M[row*cols + col] * scalar;
+}
+
+Matrix Matrix::operator*(float scalar) const{
+    Matrix out = Matrix(rows(), cols());
+    copy_to_gpu();
+    dim3 threads_per_block(16, 16, 1);
+    dim3 number_of_blocks((rows() + threads_per_block.x - 1) / threads_per_block.x, (cols() + threads_per_block.y - 1) / threads_per_block.y);
+
+    multiply_scalar_kernel<<<number_of_blocks, threads_per_block>>>(gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols(), scalar);
+
+    out.copy_to_cpu();
+    return out;
+}
+
+
+__global__ void add_kernel(float* A, float* B, float* out, int rows, int cols){
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    int col = blockIdx.y*blockDim.y + threadIdx.y;
+    if (row >= rows || col >= cols){
+        return;
+    }
+    out[row*cols + col] = A[row*cols + col] + B[row*cols + col];
+}
+
+Matrix Matrix::operator+(const Matrix& other) const{
+    Matrix out = Matrix(rows(), cols());
+    copy_to_gpu();
+    other.copy_to_gpu();
+    dim3 threads_per_block(16, 16, 1);
+    dim3 number_of_blocks((rows() + threads_per_block.x - 1) / threads_per_block.x, (cols() + threads_per_block.y - 1) / threads_per_block.y);
+
+    add_kernel<<<number_of_blocks, threads_per_block>>>(gpu_data_ptr.get(), other.gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols());
+    out.copy_to_cpu();
+    return out;
+}
+
+Matrix Matrix::operator-(const Matrix& other) const{
+    return *this + (other * -1);
+}
+
+__global__ void sum_rows_kernel(float* M, float* out, int rows, int cols){
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= rows){
+        return;
+    }
+    float sum = 0;
+    for (int i = 0; i < cols; i++){
+        sum += M[row*cols + i];
+    }
+    out[row] = sum;
+}
+
+Matrix Matrix::sum_rows() const{
+    Matrix out = Matrix(rows(), 1);
+    copy_to_gpu();
+    dim3 threads_per_block(16, 16, 1);
+    dim3 number_of_blocks((rows() + threads_per_block.x - 1) / threads_per_block.x, (cols() + threads_per_block.y - 1) / threads_per_block.y);
+
+    sum_rows_kernel<<<number_of_blocks, threads_per_block>>>(gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols());
+    out.copy_to_cpu();
+    return out;
+}
+
+
+__global__ void sum_cols_kernel(float* M, float* out, int rows, int cols){
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (col >= cols){
+        return;
+    }
+    float sum = 0;
+    for (int i = 0; i < rows; i++){
+        sum += M[i*cols + col];
+    }
+    out[col] = sum;
+}
+
+Matrix Matrix::sum_cols() const{
+    Matrix out = Matrix(1, cols());
+    copy_to_gpu();
+    dim3 threads_per_block(16, 16, 1);  
+    dim3 number_of_blocks((cols() + threads_per_block.x - 1) / threads_per_block.x, (rows() + threads_per_block.y - 1) / threads_per_block.y);
+
+    sum_cols_kernel<<<number_of_blocks, threads_per_block>>>(gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols());
     out.copy_to_cpu();
     return out;
 }
