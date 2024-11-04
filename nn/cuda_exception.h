@@ -15,7 +15,6 @@ public:
         if (error != cudaSuccess) {
             std::string error_string = cudaGetErrorString(error);
             std::cerr << "CUDA Error - " << message << ": " << error_string << std::endl;
-            std::cout << "CUDA Error - " << message << ": " << error_string << std::endl;
             throw CudaException(message + ": " + error_string);
         }
     }

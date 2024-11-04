@@ -73,7 +73,8 @@
         "__split_buffer": "cpp",
         "__tree": "cpp",
         "queue": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "codecvt": "cpp"
     },
     "editor.tabSize": 4,
     "editor.insertSpaces": true
