@@ -30,6 +30,7 @@ class Matrix {
         void copy_to_gpu() const;
         void copy_to_cpu() const;
         void set_data_in_gpu_as_valid();
+        bool gpu_data_is_valid() const;
         uint32_t rows() const { return shape_.x; }
         uint32_t cols() const { return shape_.y; }
 

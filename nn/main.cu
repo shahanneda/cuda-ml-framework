@@ -4,6 +4,7 @@
 #include "matrix.h"
 #include "binary_cross_entropy_loss.h"
 #include "linear_layer.h"
+#include "sigmoid_activation_layer.h"
 using namespace std;
 
 void test_matrix() {
@@ -233,6 +234,26 @@ void test_learning_something_simple() {
     }
 }
 
+void test_sigmoid_activation_layer(){
+    SigmoidActivationLayer layer("test_sigmoid_activation_layer");
+    Matrix input(1, 3);
+    input.set_row(0, {0.5, 1.0, 2.0});
+    input.copy_to_gpu();
+
+    cout << "input to sigmoid: \n" << input << endl;
+    Matrix output = layer.forward(input);
+    output.copy_to_cpu();
+    cout << "output: \n" << output << endl;
+
+    Matrix grad_output(1, 3);
+    grad_output.set_row(0, {1, 1, 1});
+    grad_output.copy_to_gpu();
+
+    Matrix grad = layer.backward(input, grad_output);
+    grad.copy_to_cpu();
+    cout << "grad: \n" << grad << endl;
+}
+
 int main(void)
 {
     // test_sum_rows();
@@ -241,8 +262,9 @@ int main(void)
     // test_binary_cross_entropy_loss();
     // test_linear_layer();
     // test_one_layer();
-    test_learning_something_simple();
+    // test_learning_something_simple();
     // test_transpose();
     // test_matrix_multiplication();
+    test_sigmoid_activation_layer();
     return 0;
 }

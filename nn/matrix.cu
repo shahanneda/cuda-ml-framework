@@ -386,3 +386,7 @@ Matrix& Matrix::operator=(const Matrix& other) {
     }
     return *this;
 }
+
+bool Matrix::gpu_data_is_valid() const{
+    return has_propagated_updates_to_gpu;
+}
