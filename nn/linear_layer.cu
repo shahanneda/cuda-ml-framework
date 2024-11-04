@@ -98,7 +98,7 @@ Matrix LinearLayer::backward(const Matrix& input, const Matrix& grad_output) {
     
     // compute gradients for parameters
     weights_grad = input.T() * grad_output;
-    biases_grad = grad_output;
+    biases_grad = grad_output.sum_cols();
     
     // compute gradient to propagate backward: dL/dx = dL/dy * W^T
     weights.copy_to_gpu();  // Ensure weights are on GPU
@@ -114,6 +114,8 @@ void LinearLayer::update_parameters(float learning_rate){
 }
 
 void LinearLayer::clip_gradients(float min_val, float max_val){
+    weights_grad.copy_to_gpu();
+    biases_grad.copy_to_gpu();
     weights_grad = weights_grad.clip(min_val, max_val);
     biases_grad = biases_grad.clip(min_val, max_val);
 }

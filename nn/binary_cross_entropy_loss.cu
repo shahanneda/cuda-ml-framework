@@ -1,6 +1,11 @@
 #include <assert.h>
 #include "binary_cross_entropy_loss.h"
 #include "cuda_exception.h"
+#include "layer.h"
+
+
+BinaryCrossEntropyLoss::BinaryCrossEntropyLoss(const std::string& name) : name(name) {}
+
 
 __global__ void forward_kernel(const float* y_true, const float* y_pred, float *loss, int size){
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -55,7 +60,6 @@ float BinaryCrossEntropyLoss::forward(const Matrix& y_true, const Matrix& y_pred
     cudaMemcpy(&loss, d_loss, sizeof(float), cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     cudaFree(d_loss);
-
     return loss;
 }
 
@@ -73,8 +77,8 @@ Matrix BinaryCrossEntropyLoss::backward(const Matrix& y_true, const Matrix& y_pr
     dim3 number_of_blocks = ((y_pred.shape().x + (block_size.x - 1)) / block_size.x);
     backward_kernel<<<number_of_blocks, block_size>>>(y_true.gpu_data_ptr.get(), y_pred.gpu_data_ptr.get(), grad.gpu_data_ptr.get(), y_true.shape().x);
     cudaDeviceSynchronize();
-
-    grad.copy_to_cpu();
+    CudaException::throw_if_error("Failed in binary cross entropy backward");
+    grad.set_data_in_gpu_as_valid();
     return grad;
 }
 

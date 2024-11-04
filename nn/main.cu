@@ -1,38 +1,13 @@
-#include "shape.h"
 #include <iostream>
 #include <stdio.h>
+
+#include "shape.h"
 #include "matrix.h"
 #include "binary_cross_entropy_loss.h"
 #include "linear_layer.h"
 #include "sigmoid_activation_layer.h"
+#include "relu_activation_layer.h"
 using namespace std;
-
-void test_matrix() {
-    Matrix matrix = Matrix(5, 3);
-    cout << "on cpu at start: \n" << matrix << endl;
-    int counter = 0;
-    for (size_t i = 0; i < matrix.shape().x; ++i) {
-        for (size_t j = 0; j < matrix.shape().y; ++j) {
-            matrix(i, j) = counter++;
-        }
-    }
-    cout << "on cpu after init: \n" << matrix << endl;
-
-    // transfer to gpu
-    matrix.copy_to_gpu();
-    for (size_t i = 0; i < matrix.shape().x; ++i) {
-        for (size_t j = 0; j < matrix.shape().y; ++j) {
-            matrix(i, j) = 0;
-        }
-        cout << endl;
-    }
-    cout << "on cpu after clear: \n" << matrix << endl;
-
-    // transfer to cpu
-    matrix.copy_to_cpu();
-    cout << "on cpu after back cpu: \n" << matrix << endl;
-
-}
 
 void test_binary_cross_entropy_loss() {
     Matrix y_true = Matrix(10, 1);
@@ -43,7 +18,7 @@ void test_binary_cross_entropy_loss() {
     cout << "y_true: \n" << y_true << endl;
     y_true.copy_to_gpu();
     y_pred.copy_to_gpu();
-    BinaryCrossEntropyLoss loss;
+    BinaryCrossEntropyLoss loss("binary_cross_entropy_loss");
     float loss_value = loss.forward(y_true, y_pred);
 
     cout << "loss value: " << loss_value << endl;
@@ -174,9 +149,35 @@ void test_one_layer() {
     }
 }
 
+void test_copying_to_gpu_and_back() {
+    Matrix matrix = Matrix(5, 3);
+    cout << "on cpu at start: \n" << matrix << endl;
+    int counter = 0;
+    for (size_t i = 0; i < matrix.shape().x; ++i) {
+        for (size_t j = 0; j < matrix.shape().y; ++j) {
+            matrix(i, j) = counter++;
+        }
+    }
+    cout << "on cpu after init: \n" << matrix << endl;
+
+    // transfer to gpu
+    matrix.copy_to_gpu();
+    for (size_t i = 0; i < matrix.shape().x; ++i) {
+        for (size_t j = 0; j < matrix.shape().y; ++j) {
+            matrix(i, j) = 0;
+        }
+        cout << endl;
+    }
+    cout << "on cpu after clear: \n" << matrix << endl;
+
+    // transfer to cpu
+    matrix.copy_to_cpu();
+    cout << "on cpu after back cpu: \n" << matrix << endl;
+}
+
 
 void test_sigmoid_activation_layer(){
-    SigmoidActivationLayer layer("test_sigmoid_activation_layer");
+    SigmoidActivationLayer layer("sigmoid_activation_layer");
     Matrix input(1, 3);
     input.set_row(0, {0.5, 1.0, 2.0});
     input.copy_to_gpu();
@@ -198,56 +199,70 @@ void test_sigmoid_activation_layer(){
     // grad:  tensor([0.2350, 0.1966, 0.1050])
 }
 
-void test_learning_something_simple() {
+void test_relu_activation_layer() {
+    ReluActivationLayer layer("test_relu_activation_layer");
+    Matrix input(1, 3);
+
+    input.set_row(0, {-0.5, -8.0, 2.0});
+    cout << "input: \n" << input << endl;
+    input.copy_to_gpu();
+
+    Matrix output = layer.forward(input);
+    output.copy_to_cpu();
+    cout << "output: \n" << output << endl;
+
+    Matrix grad_output(1, 3);
+    grad_output.set_row(0, {1, 1, 1});
+    grad_output.copy_to_gpu();
+
+    Matrix grad = layer.backward(input, grad_output);
+    grad.copy_to_cpu();
+    cout << "grad: \n" << grad << endl;
+}
+
+
+void test_memorizing_value() {
+    // This tests a simple network that learns to memorize a value
+    // Fully Connected Layer -> ReLU -> Fully Connected Layer -> Sigmoid
+
     // Initialize layers with much smaller initial weights
-    LinearLayer layer_1("test_linear_layer_1", 1, 5, 0.01);
-    LinearLayer layer_2("test_linear_layer_2", 5, 1, 0.01);
-    SigmoidActivationLayer layer_3("test_sigmoid_activation_layer");
+    LinearLayer layer_1("linear_layer_1", 1, 5, 0.01);
+    ReluActivationLayer layer_1_activation("relu_activation_layer");
+
+    LinearLayer layer_2("linear_layer_2", 5, 1, 0.01);
+    SigmoidActivationLayer layer_2_activation("sigmoid_activation_layer");
 
     Matrix input(1, 1);
     input.set_row(0, {0.5});
     input.copy_to_gpu();
 
     Matrix target(1, 1);
-    target(0, 0) = 0.89;
+    target(0, 0) = 0.78;
     target.copy_to_gpu();
 
     // Try a range of learning rates
     float learning_rate = 0.01;
 
     for (size_t i = 0; i < 10; ++i) {
-        // cout << " right before forward" << endl;
-        // cout << "input shape: " << input.shape().x << " " << input.shape().y << endl;
+        // forward pass
         Matrix output_1 = layer_1.forward(input);
-        output_1.copy_to_cpu();
-        // cout << " right after forward" << endl;
-        Matrix output_2 = layer_2.forward(output_1);
-        output_2.copy_to_cpu();
-
-        Matrix output_3 = layer_3.forward(output_2);
-        // output_3.copy_to_cpu();
-
+        Matrix output_1_activation = layer_1_activation.forward(output_1);
+        Matrix output_2 = layer_2.forward(output_1_activation);
+        Matrix output_2_activation = layer_2_activation.forward(output_2);
         target.copy_to_gpu();
-        // output_3.copy_to_gpu();
-        Matrix diff = output_3 - target;
+        Matrix diff = output_2_activation - target;
 
+        // calculate loss
         float loss = (diff * diff).sum_rows()(0, 0) / 2.0f;
-        // cout << "loss: " << loss << endl;
-        // cout << "output_2: \n" << output_2 << endl;
-
-        
         Matrix loss_grad = diff;
         float max_grad = 1.0;
         loss_grad = loss_grad.clip(-max_grad, max_grad);
 
-        Matrix grad_output_3 = layer_3.backward(output_2, loss_grad);
-
-        // cout << "about to go backwords on layer 2" << endl;
-        Matrix grad_output_2 = layer_2.backward(output_1, loss_grad);
-        // cout << "grad_output_2: \n" << grad_output_2 << endl;
-        // cout << "about to go backwords on layer 1" << endl;
-        Matrix grad_output_1 = layer_1.backward(input, grad_output_2);
-        cout << "grad_output_1: \n" << grad_output_1 << endl;
+        // backward pass
+        Matrix grad_output_3 = layer_2_activation.backward(output_2, loss_grad);
+        Matrix grad_output_2 = layer_2.backward(output_1_activation, grad_output_3);
+        Matrix grad_output_1 = layer_1_activation.backward(output_1, grad_output_2);
+        Matrix grad_output_1_raw = layer_1.backward(input, grad_output_1);
 
         layer_1.clip_gradients(-max_grad, max_grad);
         layer_2.clip_gradients(-max_grad, max_grad);
@@ -266,17 +281,80 @@ void test_learning_something_simple() {
     }
 }
 
+void test_simple_classifier(){
+    // This trains a simple classifer which outputs 1 if the input is in the top right or bottom left quadrants, but 0 otherwise
+    // (batch_size, 2) -> Fully Connected Layer (2, 5) -> Relu -> Fully Connected Layer (5, 1) -> Sigmoid
+
+    // Generate data set
+    Matrix inputs (50, 2);
+    Matrix targets (50, 1);
+    for (size_t i = 0; i < inputs.shape().x; ++i) {
+        // Generates a random number between -1 and 1
+        float x = (((float)rand() / RAND_MAX) - 0.5)*2;
+        float y = (((float)rand() / RAND_MAX) - 0.5)*2;
+        inputs(i, 0) = x;
+        inputs(i, 1) = y;
+        targets(i, 0) = (x > 0.5 && y > 0.5) || (x < 0.5 && y < 0.5) ? 1 : 0;
+    }
+    inputs.copy_to_gpu();
+    targets.copy_to_gpu();
+
+    // Initialize layers
+    LinearLayer layer_1("linear_layer_1", 2, 5, 0.01);
+    ReluActivationLayer layer_1_activation("relu_activation_layer");
+
+    LinearLayer layer_2("linear_layer_2", 5, 1, 0.01);
+    SigmoidActivationLayer layer_2_activation("sigmoid_activation_layer");
+
+    BinaryCrossEntropyLoss loss("binary_cross_entropy_loss");
+
+    float learning_rate = 0.01;
+    float max_grad = 1.0;
+
+    for (size_t epoch = 0; epoch < 100; ++epoch) {
+        // Forward pass
+        Matrix output_1 = layer_1.forward(inputs);
+        Matrix output_1_activation = layer_1_activation.forward(output_1);
+        Matrix output_2 = layer_2.forward(output_1_activation);
+        Matrix output_2_activation = layer_2_activation.forward(output_2);
+
+        // Calculate loss
+        float loss_value = loss.forward(targets, output_2_activation);
+
+        // Backward pass
+        Matrix loss_grad = loss.backward(targets, output_2_activation);
+        Matrix grad_output_2 = layer_2_activation.backward(output_2, loss_grad);
+        Matrix grad_output_1 = layer_2.backward(output_1_activation, grad_output_2);
+        Matrix grad_output_1_raw = layer_1_activation.backward(output_1, grad_output_1);
+        layer_1.clip_gradients(-max_grad, max_grad);
+        layer_2.clip_gradients(-max_grad, max_grad);
+
+        layer_1.update_parameters(learning_rate);
+        layer_2.update_parameters(learning_rate);
+
+        if (epoch % 10 == 0) {
+            cout << "----------------" << endl;
+            cout << "Epoch " << epoch << endl;
+            cout << "loss: " << loss_value << endl;
+            cout << "----------------" << endl;
+        }
+    }
+}
+
 int main(void)
 {
     // test_sum_rows();
     // test_sum_cols();
+    // test_copying_to_gpu_and_back();
     // test_matrix();
     // test_binary_cross_entropy_loss();
     // test_linear_layer();
     // test_one_layer();
-    test_learning_something_simple();
+    // test_memorizing_value();
     // test_transpose();
     // test_matrix_multiplication();
     // test_sigmoid_activation_layer();
+    // test_relu_activation_layer();
+    test_simple_classifier();
     return 0;
 }

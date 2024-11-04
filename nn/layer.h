@@ -9,7 +9,7 @@ public:
     virtual Matrix forward(const Matrix& input) = 0;
     virtual Matrix backward(const Matrix& input, const Matrix& grad_output) = 0;
     std::string name() const { return name_; }
-
+    virtual ~Layer() = default;
 protected:
     std::string name_;
 };

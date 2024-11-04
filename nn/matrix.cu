@@ -1,8 +1,10 @@
-#include "matrix.h"
 #include <memory>
 #include <iostream>
 #include <cuda.h>
+#include <cstring>
+
 #include "cuda_exception.h"
+#include "matrix.h"
 
 using std::cout;
 using std::endl;
@@ -188,8 +190,9 @@ Matrix Matrix::operator*(const Matrix& other) const{
     if (!other.has_propagated_updates_to_gpu){
         throw std::runtime_error("Other matrix has not been propagated to GPU");
     }
+    // If the multiplication is A*B
     // This is A
-    // B is the other one
+    // other is B
     if (cols() != other.rows()){
         throw std::invalid_argument("Invalid matrix dimensions for multiplication");
     }
@@ -311,8 +314,8 @@ Matrix Matrix::sum_cols() const{
 
     sum_cols_kernel<<<number_of_blocks, threads_per_block>>>(gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols());
     cudaDeviceSynchronize();
-    out.has_propagated_updates_to_gpu = true;
     out.copy_to_cpu();
+    out.set_data_in_gpu_as_valid();
     return out;
 }
 
@@ -340,13 +343,14 @@ Matrix Matrix::clip(float min_val, float max_val) const{
     return out;
 }
 
+// Marks the data currently in the GPU memoery as valid
+// So no need to copy data from the CPU to the GPU if this is set
 void Matrix::set_data_in_gpu_as_valid(){
     has_propagated_updates_to_gpu = true;
 }
 
 // Copy constructor
 
-#include <cstring>
 Matrix::Matrix(const Matrix& other) 
     : shape_(other.shape_), 
       has_propagated_updates_to_gpu(other.has_propagated_updates_to_gpu) {
