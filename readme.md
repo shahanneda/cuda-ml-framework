@@ -74,3 +74,10 @@ for (size_t epoch = 0; epoch < 100; ++epoch) {
     }
 }
 ```
+
+
+### Compiling:
+```bash
+cd nn && make && ./nn
+```
+See main.cu for example usages.
