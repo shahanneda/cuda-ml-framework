@@ -1,3 +1,5 @@
+# Cuda ML Framework
+
 A simple machine learning framework built completly from scatch in C++ and CUDA with no other dependencies for educational purposes.
 
 Currently supports:
