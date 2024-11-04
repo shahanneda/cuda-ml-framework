@@ -115,7 +115,8 @@ Matrix LinearLayer::backward(const Matrix& input, const Matrix& grad_output) {
     
     // compute gradients for parameters
     weights_grad = input.T() * grad_output;
-    // cout << "grad output.shape(): " << grad_output.shape().x << "x" << grad_output.shape().y << endl;
+    cout << "grad output.shape(): " << grad_output.shape().x << "x" << grad_output.shape().y << endl;
+    cout << " biases grad shape: " << biases_grad.shape().x << "x" << biases_grad.shape().y << endl;
     biases_grad = grad_output;
     cout << "biases_grad: \n" << biases_grad << endl;
     cout << "weights_grad: \n" << weights_grad << endl;
@@ -126,8 +127,8 @@ Matrix LinearLayer::backward(const Matrix& input, const Matrix& grad_output) {
 }
 
 void LinearLayer::update_parameters(float learning_rate){
-    cout << "weights_grad: \n" << weights_grad << endl;
-    cout << " before updating weights: \n" << weights << endl;
+    // cout << "weights_grad: \n" << weights_grad << endl;
+    // cout << " before updating weights: \n" << weights << endl;
     weights = weights - (weights_grad * learning_rate);
     weights.copy_to_cpu();
     // cout << " after updating weights: \n" << weights << endl;
@@ -158,7 +159,7 @@ void LinearLayer::update_parameters(float learning_rate){
 
     biases = biases - (biases_grad * learning_rate);
     biases.copy_to_cpu();
-    cout << " after updating biases: \n" << biases << endl;
+    // cout << " after updating biases: \n" << biases << endl;
 }
 
 void LinearLayer::clip_gradients(float min_val, float max_val){

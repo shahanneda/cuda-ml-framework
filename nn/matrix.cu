@@ -15,6 +15,14 @@ Matrix::Matrix(size_t rows, size_t cols) : shape_(rows, cols), cpu_data_ptr(null
 }
 
 Matrix::~Matrix() {
+    cudaDeviceSynchronize();
+    if (gpu_data_ptr){
+        gpu_data_ptr.reset();
+        CudaException::throw_if_error("Failed to reset GPU data pointer");
+    }
+    if (cpu_data_ptr){
+        cpu_data_ptr.reset();
+    }
 }
 
 void Matrix::allocate_memory() {
@@ -33,7 +41,11 @@ void Matrix::allocate_cpu_memory() {
 
 void Matrix::allocate_gpu_memory() {
     float* gpu_data = nullptr;
-    cudaMalloc(&gpu_data, shape_.x * shape_.y * sizeof(float));
+    size_t bytes_to_allocate = std::max(shape_.x * shape_.y, (size_t)1) * sizeof(float);
+    cudaError_t err = cudaMalloc(&gpu_data, bytes_to_allocate);
+    if (err != cudaSuccess) {
+        throw CudaException("Failed to allocate GPU memory");
+    }
     gpu_data_ptr = std::shared_ptr<float>(gpu_data, [](float* p) {cudaFree(p);});
 }
 
@@ -173,6 +185,9 @@ Matrix Matrix::operator*(const Matrix& other) const{
     if (!has_propagated_updates_to_gpu){
         throw std::runtime_error("Matrix has not been propagated to GPU");
     }
+    if (!other.has_propagated_updates_to_gpu){
+        throw std::runtime_error("Other matrix has not been propagated to GPU");
+    }
     // This is A
     // B is the other one
     if (cols() != other.rows()){
@@ -206,7 +221,6 @@ Matrix Matrix::operator*(float scalar) const{
     dim3 threads_per_block(16, 16, 1);
     dim3 number_of_blocks((rows() + threads_per_block.x - 1) / threads_per_block.x, (cols() + threads_per_block.y - 1) / threads_per_block.y);
 
-    cout << "calling this!!" << endl;
     multiply_scalar_kernel<<<number_of_blocks, threads_per_block>>>(gpu_data_ptr.get(), out.gpu_data_ptr.get(), rows(), cols(), scalar);
     cudaDeviceSynchronize();
     out.has_propagated_updates_to_gpu = true;
@@ -228,6 +242,9 @@ __global__ void add_kernel(float* A, float* B, float* out, int rows, int cols){
 Matrix Matrix::operator+(const Matrix& other) const{
     if (!has_propagated_updates_to_gpu){
         throw std::runtime_error("Matrix has not been propagated to GPU");
+    }
+    if (!other.has_propagated_updates_to_gpu){
+        throw std::runtime_error("Other matrix has not been propagated to GPU");
     }
     Matrix out = Matrix(rows(), cols());
     dim3 threads_per_block(16, 16, 1);
@@ -341,10 +358,11 @@ Matrix::Matrix(const Matrix& other)
     // Copy CPU data
     std::memcpy(cpu_data_ptr.get(), other.cpu_data_ptr.get(), total_size() * sizeof(float));
     // Copy GPU data if valid
-    if (other.has_propagated_updates_to_gpu) {
-        cudaMemcpy(gpu_data_ptr.get(), other.gpu_data_ptr.get(), 
-                  total_size() * sizeof(float), cudaMemcpyDeviceToDevice);
+    if (!other.has_propagated_updates_to_gpu) {
+        throw std::runtime_error("Other matrix has not been propagated to GPU");
     }
+    cudaMemcpy(gpu_data_ptr.get(), other.gpu_data_ptr.get(), 
+                total_size() * sizeof(float), cudaMemcpyDeviceToDevice);
 }
 
 // Assignment operator
@@ -360,10 +378,11 @@ Matrix& Matrix::operator=(const Matrix& other) {
         std::memcpy(cpu_data_ptr.get(), other.cpu_data_ptr.get(), 
                    total_size() * sizeof(float));
         // Copy GPU data if valid
-        if (other.has_propagated_updates_to_gpu) {
-            cudaMemcpy(gpu_data_ptr.get(), other.gpu_data_ptr.get(), 
-                      total_size() * sizeof(float), cudaMemcpyDeviceToDevice);
+        if (!other.has_propagated_updates_to_gpu) {
+            throw std::runtime_error("Other matrix has not been propagated to GPU");
         }
+        cudaMemcpy(gpu_data_ptr.get(), other.gpu_data_ptr.get(), 
+                  total_size() * sizeof(float), cudaMemcpyDeviceToDevice);
     }
     return *this;
 }
