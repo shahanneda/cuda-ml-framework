@@ -7,7 +7,10 @@ class Matrix {
     public:
         Matrix(Shape shape);
         Matrix(size_t rows, size_t cols);
+        Matrix(const Matrix& other);
+        Matrix& operator=(const Matrix& other);
         ~Matrix();
+
         Shape shape() const;
 
         std::shared_ptr<float> cpu_data_ptr;
@@ -26,6 +29,7 @@ class Matrix {
 
         void copy_to_gpu() const;
         void copy_to_cpu() const;
+        void set_data_in_gpu_as_valid();
         uint32_t rows() const { return shape_.x; }
         uint32_t cols() const { return shape_.y; }
 
@@ -40,6 +44,9 @@ class Matrix {
 
         void setIdentity();
 
+        Matrix clip(float min_val, float max_val) const;
+
+
 
     private:
         Shape shape_;
@@ -49,4 +56,5 @@ class Matrix {
         void allocate_gpu_memory();
 
         friend std::ostream& operator<<(std::ostream& os, const Matrix& matrix);
+        mutable bool has_propagated_updates_to_gpu = false;
 };

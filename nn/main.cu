@@ -124,38 +124,114 @@ void test_sum_cols(){
     cout << "sum: \n" << sum << endl;
 }
 
-void test_learning_something_simple(){
-    // the goal is to have the linear layer always output 0.8
-    // we will use MSE as loss
-    // the target is a vector of 0.8s
-    // the input is a vector of 1s
-    // we will train the linear layer on this simple problem
+void test_one_layer() {
+    // Initialize layers with much smaller initial weights
+    LinearLayer layer_1("test_linear_layer_1", 1, 1, 0.01);
 
-    LinearLayer layer("test_linear_layer", 5, 1);
-    cout << "layer: \n" << layer.weights << endl << layer.biases << endl;
-
-    Matrix input(1, 5);
-    input.set_row(0, {0.5, 0.8, 0.3, 0.4, 0.1});
+    Matrix input(1, 1);
+    input.set_row(0, {0.5});
     input.copy_to_gpu();
 
     Matrix target(1, 1);
-    target(0, 0) = 0.59;
+    target(0, 0) = 0.5;
     target.copy_to_gpu();
 
-    for (size_t i = 0; i < 100; ++i){
-        Matrix output = layer.forward(input);
-        output.copy_to_cpu();
-        cout << "output: \n" << output(0,0) << endl;
+    // Try a range of learning rates
+    float learning_rate = 0.1;
 
-        Matrix loss = (output - target) *(output - target).sum_rows();
-        cout << "loss: \n" << loss(0, 0) << endl;
+    for (size_t i = 0; i < 100; ++i) {
+        // cout << " right before forward" << endl;
+        // cout << "input shape: " << input.shape().x << " " << input.shape().y << endl;
+        Matrix output_1 = layer_1.forward(input);
+        Matrix diff = output_1 - target;
 
-        layer.backward(input, loss);
-        layer.update_parameters(0.2);
-        // cout << "layer: \n" << layer.weights << endl << layer.biases << endl;
+        float loss = (diff * diff).sum_rows()(0, 0) / 2.0f;
+        // cout << "loss: " << loss << endl;
+        cout << "output_1: \n" << output_1 << endl;
+
+        
+        Matrix loss_grad = diff;
+        cout << "loss_grad: \n" << loss_grad << endl;
+        float max_grad = 1.0;
+        loss_grad = loss_grad.clip(-max_grad, max_grad);
+        
+        cout << "about to go backwords on layer 1" << endl;
+        Matrix grad_output_1 = layer_1.backward(input, loss_grad);
+        cout << "grad_output_1: \n" << grad_output_1 << endl;
+
+        layer_1.clip_gradients(-max_grad, max_grad);
+        layer_1.update_parameters(learning_rate);
+        
+        if (i % 1 == 0) {
+            cout << "----------------" << endl;
+            cout << "Iteration " << i << endl;
+            cout << "output: " << output_1(0,0) << endl;
+            cout << "Loss: " << loss << endl;
+            cout << "target: " << target(0,0) << endl;
+            cout << "----------------" << endl;
+        }
     }
+}
+void test_learning_something_simple() {
+    // Initialize layers with much smaller initial weights
+    LinearLayer layer_1("test_linear_layer_1", 1, 2, 0.01);
+    LinearLayer layer_2("test_linear_layer_2", 2, 1, 0.01);
 
+    Matrix input(1, 1);
+    input.set_row(0, {0.5});
+    input.copy_to_gpu();
 
+    Matrix target(1, 1);
+    target(0, 0) = 0.5;
+    target.copy_to_gpu();
+
+    // Try a range of learning rates
+    float learning_rate = 0.01;
+
+    for (size_t i = 0; i < 5; ++i) {
+        // cout << " right before forward" << endl;
+        // cout << "input shape: " << input.shape().x << " " << input.shape().y << endl;
+        Matrix output_1 = layer_1.forward(input);
+        output_1.copy_to_cpu();
+        // cout << " right after forward" << endl;
+        Matrix output_2 = layer_2.forward(output_1);
+        output_2.copy_to_cpu();
+
+        target.copy_to_gpu();
+        Matrix diff = output_2 - target;
+
+        float loss = (diff * diff).sum_rows()(0, 0) / 2.0f;
+        cout << "loss: " << loss << endl;
+        cout << "output_2: \n" << output_2 << endl;
+
+        
+        Matrix loss_grad = diff;
+        float max_grad = 1.0;
+        loss_grad = loss_grad.clip(-max_grad, max_grad);
+        
+        cout << "about to go backwords on layer 2" << endl;
+        Matrix grad_output_2 = layer_2.backward(output_1, loss_grad);
+        cout << "grad_output_2: \n" << grad_output_2 << endl;
+
+        cout << "about to go backwords on layer 1" << endl;
+        Matrix grad_output_1 = layer_1.backward(input, grad_output_2);
+        cout << "grad_output_1: \n" << grad_output_1 << endl;
+
+        layer_1.clip_gradients(-max_grad, max_grad);
+        layer_2.clip_gradients(-max_grad, max_grad);
+
+        layer_1.update_parameters(learning_rate);
+        layer_2.update_parameters(learning_rate);
+        
+        if (i % 1 == 0) {
+            cout << "----------------" << endl;
+            cout << "Iteration " << i << endl;
+            cout << "output: " << output_2(0,0) << endl;
+            cout << "loss: " << loss << endl;
+            cout << "target: " << target(0,0) << endl;
+            cout << "----------------" << endl;
+        }
+    }
 }
 
 int main(void)
@@ -165,6 +241,7 @@ int main(void)
     // test_matrix();
     // test_binary_cross_entropy_loss();
     // test_linear_layer();
+    // test_one_layer();
     test_learning_something_simple();
     // test_transpose();
     // test_matrix_multiplication();
