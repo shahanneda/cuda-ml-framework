@@ -4,7 +4,6 @@
 using namespace std;
 
 LinearLayer::LinearLayer(std::string name, uint32_t input_size, uint32_t output_size, float init_scale) : Layer(name), weights(input_size, output_size), biases(1, output_size), weights_grad(input_size, output_size), biases_grad(1, output_size) {
-
     // input_size is the number of "columns" in the input matrix
     // output_size is the number of "columns" in the output matrix, which corresponds to the number of neurons in the layer
     // For each row of the output, that represents the value of a single data point, for all the neuroons.
@@ -30,29 +29,13 @@ __global__ void forward_kernel(float* input, float* weights, float* biases, floa
 }
 
 void LinearLayer::initialize_weights() {
-
-
-    // // Initialize weights with scaled random values
-    // for (size_t i = 0; i < weights.shape().x; ++i) {
-    //     for (size_t j = 0; j < weights.shape().y; ++j) {
-    //         // Xavier/Glorot initialization scaled by init_scale
-    //         float limit = sqrt(6.0f / (input_size + output_size));
-    //         weights(i, j) = init_scale * ((float)rand() / RAND_MAX * 2.0f - 1.0f) * limit;
-    //     }
-    // }
-    
-    // // Initialize biases to zero
-    // for (size_t i = 0; i < biases.shape().x; ++i) {
-    //     biases(i, 0) = 0.0f;
-    // }
-
     for (int i = 0; i < weights.rows(); i++) {
         for (int j = 0; j < weights.cols(); j++) {
             weights(i, j) = fmaxf(static_cast<float>(rand()) / static_cast<float>(RAND_MAX), 1e-7f);
         }
     }
+
     for (int i = 0; i < biases.cols(); i++) {
-        // biases(0, i) = fmaxf(static_cast<float>(rand()) / static_cast<float>(RAND_MAX), 1e-7f);
         biases(i, 0) = 0.0f;
     }
 }
@@ -115,11 +98,7 @@ Matrix LinearLayer::backward(const Matrix& input, const Matrix& grad_output) {
     
     // compute gradients for parameters
     weights_grad = input.T() * grad_output;
-    cout << "grad output.shape(): " << grad_output.shape().x << "x" << grad_output.shape().y << endl;
-    cout << " biases grad shape: " << biases_grad.shape().x << "x" << biases_grad.shape().y << endl;
     biases_grad = grad_output;
-    cout << "biases_grad: \n" << biases_grad << endl;
-    cout << "weights_grad: \n" << weights_grad << endl;
     
     // compute gradient to propagate backward: dL/dx = dL/dy * W^T
     weights.copy_to_gpu();  // Ensure weights are on GPU
@@ -127,39 +106,11 @@ Matrix LinearLayer::backward(const Matrix& input, const Matrix& grad_output) {
 }
 
 void LinearLayer::update_parameters(float learning_rate){
-    // cout << "weights_grad: \n" << weights_grad << endl;
-    // cout << " before updating weights: \n" << weights << endl;
     weights = weights - (weights_grad * learning_rate);
     weights.copy_to_cpu();
-    // cout << " after updating weights: \n" << weights << endl;
-
-    // cout << "biases_grad: \n" << biases_grad << endl;
-    // cout << " before updating biases: \n" << biases << endl;
-    // biases_grad.copy_to_cpu();
-    // cout << "biases_grad: \n" << biases_grad << endl;
-    // cout << "biases grad * learning rate: \n" << biases_grad * learning_rate << endl;
-    // biases_grad.copy_to_cpu();
-
-    // Debug print the memory addresses
-    // cout << "weights_grad GPU ptr: " << weights_grad.gpu_data_ptr.get() << endl;
-    // cout << "weights GPU ptr: " << weights.gpu_data_ptr.get() << endl;
-    // cout << "biases_grad GPU ptr: " << biases_grad.gpu_data_ptr.get() << endl;
-    // cout << "biases GPU ptr: " << biases.gpu_data_ptr.get() << endl;
-
-    // Do the weights_grad + weights operation separately
-    // Matrix temp = weights_grad + weights;
-    // cudaDeviceSynchronize();
-    // cout << "random line: \n"
-    //      << temp << endl;
-    // cudaDeviceSynchronize();
-
-    // cout << "biases: \n" << biases << endl;
-    // cout << "biases_grad: \n" << biases_grad << endl;
-    // cout << "biases_grad * learning rate: \n" << biases_grad * learning_rate << endl;
 
     biases = biases - (biases_grad * learning_rate);
     biases.copy_to_cpu();
-    // cout << " after updating biases: \n" << biases << endl;
 }
 
 void LinearLayer::clip_gradients(float min_val, float max_val){

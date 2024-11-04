@@ -258,10 +258,6 @@ Matrix Matrix::operator+(const Matrix& other) const{
 }
 
 Matrix Matrix::operator-(const Matrix& other) const{
-    // cout << "this propagated to gpu: " << has_propagated_updates_to_gpu << endl;
-    // cout << "other propagated to gpu: " << other.has_propagated_updates_to_gpu << endl;
-    // cout << "other * -1 propagated to gpu: " << (other * -1).has_propagated_updates_to_gpu << endl;
-    // cout << "this + (other * -1) propagated to gpu: " << ((*this + (other * -1)).has_propagated_updates_to_gpu) << endl;
     return *this + (other * -1);
 }
 

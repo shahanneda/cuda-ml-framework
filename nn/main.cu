@@ -173,17 +173,43 @@ void test_one_layer() {
         }
     }
 }
+
+
+void test_sigmoid_activation_layer(){
+    SigmoidActivationLayer layer("test_sigmoid_activation_layer");
+    Matrix input(1, 3);
+    input.set_row(0, {0.5, 1.0, 2.0});
+    input.copy_to_gpu();
+
+    cout << "input to sigmoid: \n" << input << endl;
+    Matrix output = layer.forward(input);
+    output.copy_to_cpu();
+    cout << "output: \n" << output << endl;
+
+    Matrix grad_output(1, 3);
+    grad_output.set_row(0, {1, 1, 1});
+    grad_output.copy_to_gpu();
+
+    Matrix grad = layer.backward(input, grad_output);
+    grad.copy_to_cpu();
+    cout << "grad: \n" << grad << endl;
+    // Expected output
+    // output:  tensor([0.6225, 0.7311, 0.8808], grad_fn=<SigmoidBackward0>)
+    // grad:  tensor([0.2350, 0.1966, 0.1050])
+}
+
 void test_learning_something_simple() {
     // Initialize layers with much smaller initial weights
     LinearLayer layer_1("test_linear_layer_1", 1, 5, 0.01);
     LinearLayer layer_2("test_linear_layer_2", 5, 1, 0.01);
+    SigmoidActivationLayer layer_3("test_sigmoid_activation_layer");
 
     Matrix input(1, 1);
     input.set_row(0, {0.5});
     input.copy_to_gpu();
 
     Matrix target(1, 1);
-    target(0, 0) = 0.8;
+    target(0, 0) = 0.89;
     target.copy_to_gpu();
 
     // Try a range of learning rates
@@ -198,8 +224,12 @@ void test_learning_something_simple() {
         Matrix output_2 = layer_2.forward(output_1);
         output_2.copy_to_cpu();
 
+        Matrix output_3 = layer_3.forward(output_2);
+        // output_3.copy_to_cpu();
+
         target.copy_to_gpu();
-        Matrix diff = output_2 - target;
+        // output_3.copy_to_gpu();
+        Matrix diff = output_3 - target;
 
         float loss = (diff * diff).sum_rows()(0, 0) / 2.0f;
         // cout << "loss: " << loss << endl;
@@ -209,7 +239,9 @@ void test_learning_something_simple() {
         Matrix loss_grad = diff;
         float max_grad = 1.0;
         loss_grad = loss_grad.clip(-max_grad, max_grad);
-        
+
+        Matrix grad_output_3 = layer_3.backward(output_2, loss_grad);
+
         // cout << "about to go backwords on layer 2" << endl;
         Matrix grad_output_2 = layer_2.backward(output_1, loss_grad);
         // cout << "grad_output_2: \n" << grad_output_2 << endl;
@@ -234,26 +266,6 @@ void test_learning_something_simple() {
     }
 }
 
-void test_sigmoid_activation_layer(){
-    SigmoidActivationLayer layer("test_sigmoid_activation_layer");
-    Matrix input(1, 3);
-    input.set_row(0, {0.5, 1.0, 2.0});
-    input.copy_to_gpu();
-
-    cout << "input to sigmoid: \n" << input << endl;
-    Matrix output = layer.forward(input);
-    output.copy_to_cpu();
-    cout << "output: \n" << output << endl;
-
-    Matrix grad_output(1, 3);
-    grad_output.set_row(0, {1, 1, 1});
-    grad_output.copy_to_gpu();
-
-    Matrix grad = layer.backward(input, grad_output);
-    grad.copy_to_cpu();
-    cout << "grad: \n" << grad << endl;
-}
-
 int main(void)
 {
     // test_sum_rows();
@@ -262,9 +274,9 @@ int main(void)
     // test_binary_cross_entropy_loss();
     // test_linear_layer();
     // test_one_layer();
-    // test_learning_something_simple();
+    test_learning_something_simple();
     // test_transpose();
     // test_matrix_multiplication();
-    test_sigmoid_activation_layer();
+    // test_sigmoid_activation_layer();
     return 0;
 }

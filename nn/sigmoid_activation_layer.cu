@@ -25,6 +25,7 @@ Matrix SigmoidActivationLayer::forward(const Matrix& input) {
 
     sigmoid_forward<<<number_of_blocks, number_of_threads>>>(input.gpu_data_ptr.get(), output.gpu_data_ptr.get(), number_of_elements);
     cudaDeviceSynchronize();
+    output.set_data_in_gpu_as_valid();
     return output;
 }
 
@@ -52,6 +53,6 @@ Matrix SigmoidActivationLayer::backward(const Matrix& input, const Matrix& grad_
 
     sigmoid_backward<<<number_of_blocks, number_of_threads>>>(input.gpu_data_ptr.get(), grad_output.gpu_data_ptr.get(), output.gpu_data_ptr.get(), number_of_elements);
     cudaDeviceSynchronize();
-
+    output.set_data_in_gpu_as_valid();
     return output;
 }
